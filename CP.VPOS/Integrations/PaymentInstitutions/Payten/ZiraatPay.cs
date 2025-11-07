@@ -10,16 +10,17 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 
-namespace CP.VPOS.Banks.Paratika
+namespace CP.VPOS.Banks.ZiraatPay
 {
-    internal class ParatikaVirtualPOSService : IVirtualPOSService
+    internal class ZiraatPayVirtualPOSService : IVirtualPOSService
     {
-        private readonly string _urlAPITest = "https://entegrasyon.paratika.com.tr/paratika/api/v2";
-        private readonly string _urlAPILive = "https://vpos.paratika.com.tr/paratika/api/v2";
+        private readonly string _urlAPITest = "https://entegrasyon.ziraatpay.com.tr/ziraatpay/api/v2";
+        private readonly string _urlAPILive = "https://vpos.ziraatpay.com.tr/ziraatpay/api/v2";
 
-        private readonly string _url3Dtest = "https://entegrasyon.paratika.com.tr/paratika/api/v2/post/sale3d/{0}";
-        private readonly string _url3DLive = "https://vpos.paratika.com.tr/paratika/api/v2/post/sale3d/{0}";
+        private readonly string _url3Dtest = "https://entegrasyon.ziraatpay.com.tr/ziraatpay/api/v2/post/sale3d/{0}";
+        private readonly string _url3DLive = "https://vpos.ziraatpay.com.tr/ziraatpay/api/v2/post/sale3d/{0}";
 
+        private readonly string _org_id = "6bmm5c3v"; // ZiraatPay için Online Metrix Org ID
 
         public SaleResponse Sale(SaleRequest request, VirtualPOSAuth auth)
         {
@@ -347,10 +348,10 @@ namespace CP.VPOS.Banks.Paratika
 
                 string thmaxrix = Environment.NewLine
                     + $@"
-    <script type=""text/javascript"" src=""https://h.online-metrix.net/fp/tags.js?org_id=6bmm5c3v&amp&session_id={sessionToken}&pageid=1"">
+    <script type=""text/javascript"" src=""https://h.online-metrix.net/fp/tags.js?org_id={_org_id}&amp&session_id={sessionToken}&pageid=1"">
     </script>
     <noscript>
-        <iframe style=""width: 100px; height: 100px; border: 0; position: absolute; top: -5000px;"" src=""https://h.online-metrix.net/fp/tags.js?org_id=6bmm5c3v&amp&session_id={sessionToken}&pageid=1""></iframe>
+        <iframe style=""width: 100px; height: 100px; border: 0; position: absolute; top: -5000px;"" src=""https://h.online-metrix.net/fp/tags.js?org_id={_org_id}&amp&session_id={sessionToken}&pageid=1""></iframe>
     </noscript>
 " + Environment.NewLine;
 
@@ -420,7 +421,7 @@ namespace CP.VPOS.Banks.Paratika
                     throw new Exception(err);
             }
 
-            throw new Exception("Paratika session token oluşturulamadı");
+            throw new Exception("ZiraatPay session token oluşturulamadı");
         }
 
         private string Request(Dictionary<string, string> param, VirtualPOSAuth auth, string link = null)
@@ -432,9 +433,9 @@ namespace CP.VPOS.Banks.Paratika
             System.Net.ServicePointManager.Expect100Continue = false;
 
             using (HttpClient client = new HttpClient())
-            using (var paratikaRequest = new FormUrlEncodedContent(param))
+            using (var ziraatPayRequest = new FormUrlEncodedContent(param))
             {
-                var response = client.PostAsync(link ?? (auth.testPlatform ? _urlAPITest : _urlAPILive), paratikaRequest).Result;
+                var response = client.PostAsync(link ?? (auth.testPlatform ? _urlAPITest : _urlAPILive), ziraatPayRequest).Result;
                 responseString = response.Content.ReadAsStringAsync().Result;
             }
 
@@ -578,13 +579,13 @@ namespace CP.VPOS.Banks.Paratika
                 case "ERR10144": desc = "Üye iş yerinin yabancı banka kartları ile işlem yapma yetkisi yoktur"; break;
                 case "ERR10145": desc = "Tekrarlı ödeme bulunamadı."; break;
                 case "ERR10146": desc = "Tekrarlı ödeme kartı bulunamadı."; break;
-                case "ERR10147": desc = "3D doğrulama olmaksızın kart ekleme yetkiniz yoktur. Lütfen HPP entegrasyon modelini kullanarak kart ekleyiniz ya da Paratika destek ekibinden yardım alınız."; break;
+                case "ERR10147": desc = "3D doğrulama olmaksızın kart ekleme yetkiniz yoktur. Lütfen HPP entegrasyon modelini kullanarak kart ekleyiniz ya da ZiraatPay destek ekibinden yardım alınız."; break;
                 case "ERR10148": desc = "Tekrarlı ödeme planı zaten bu kart daha önce eklenmiş."; break;
                 case "ERR10149": desc = "Bu işlem için desteklenmeyen para birimi"; break;
                 case "ERR10150": desc = "İndirim tutarı sipariş tutarından yüksek olamaz."; break;
                 case "ERR10151": desc = "Satıcı bulunamadı"; break;
                 case "ERR10152": desc = "Bu id ile satıcı mevcuttur."; break;
-                case "ERR10153": desc = "İade işlemi Paratika Finans ekibi tarafından red edilmiştir"; break;
+                case "ERR10153": desc = "İade işlemi ZiraatPay Finans ekibi tarafından red edilmiştir"; break;
                 case "ERR10154": desc = "İşlem 3D kısıtlamasıyla başarısız olmuştur."; break;
                 case "ERR10155": desc = "Satıcı deaktive durumdadir. Bu işlem yapılamaz."; break;
                 case "ERR10156": desc = "Unsupported Currency Conversion"; break;
@@ -601,7 +602,7 @@ namespace CP.VPOS.Banks.Paratika
                 case "ERR10167": desc = "Invalid sellerId - do not use semicolon"; break;
                 case "ERR10168": desc = "Bu kart markası desteklenmemektedir"; break;
                 case "ERR10169": desc = "Taksit bu kart markası için uygun değildir"; break;
-                case "ERR10170": desc = "Girilen değer geçerli aralığın dışında. Minimum değer 1 olmalı, maksimum değer için lütfen Paratika Operasyon Ekibi'yle iletişime geçiniz."; break;
+                case "ERR10170": desc = "Girilen değer geçerli aralığın dışında. Minimum değer 1 olmalı, maksimum değer için lütfen ZiraatPay Operasyon Ekibi'yle iletişime geçiniz."; break;
                 case "ERR10171": desc = "Belirtilen MCC bulunamadı."; break;
                 case "ERR10172": desc = "Belirtilen MCC daha önce eklenmiş"; break;
                 case "ERR10173": desc = "Ürün komisyon tutarları TOTALSELLERCOMMISSIONAMOUNT parametresinde belirtilen komisyon tutarıyla uyuşmamaktadır."; break;
@@ -677,6 +678,11 @@ namespace CP.VPOS.Banks.Paratika
             }
 
             return desc;
+        }
+
+        public SaleQueryResponse SaleQuery(SaleQueryRequest request, VirtualPOSAuth auth)
+        {
+            return new SaleQueryResponse { statu = SaleQueryResponseStatu.Error, message = "Bu sanal pos için satış sorgulama işlemi şuan desteklenmiyor" };
         }
     }
 }

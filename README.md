@@ -1,16 +1,57 @@
 # CP.VPOS
 [![Nuget download](https://img.shields.io/nuget/dt/CP.VPOS)](https://www.nuget.org/packages/CP.VPOS) [![Nuget v2](https://img.shields.io/nuget/v/CP.VPOS)](https://www.nuget.org/packages/CP.VPOS) ![build](https://img.shields.io/github/actions/workflow/status/cempehlivan/cp.vpos/dotnet.yml?branch=master) [![GitHub license](https://img.shields.io/github/license/cempehlivan/CP.VPOS)](https://github.com/cempehlivan/CP.VPOS/blob/master/LICENSE)
 
-![.net version](https://img.shields.io/badge/.net%20framework-4.0--4.8-purple) ![.net version](https://img.shields.io/badge/.net%20core-3.1-purple) ![.net version](https://img.shields.io/badge/.net-5.0-purple) ![.net version](https://img.shields.io/badge/.net-6.0-purple) ![.net version](https://img.shields.io/badge/.net-7.0-purple) ![.net version](https://img.shields.io/badge/.net-8.0-purple) ![.net maui](https://img.shields.io/badge/.net-MAUI-purple)
 
 
-Bu projenin amacı, tüm sanal posları tek bir codebase ile kullanmak.
+## CP.VPOS: Sanal Pos Entegrasyonlarını Basitleştirin
+
+CP.VPOS, Türkiye'deki birçok bankanın sanal pos entegrasyonlarını tek bir kod tabanı ile kullanmayı mümkün kılan .NET kütüphanesidir. Bu sayede geliştiriciler, her banka için ayrı ayrı kod yazmak zorunda kalmadan, tüm sanal pos işlemlerini tek bir kütüphane üzerinden gerçekleştirebilirler.
+
+## Kütüphanenin Özellikleri
+
++ **Tek Kod Tabanı:** Farklı bankaların sanal pos entegrasyonları için ayrı ayrı kod yazmaya gerek kalmadan, tek bir kod tabanı ile tüm işlemleri gerçekleştirebilirsiniz.
++ **Basitleştirilmiş İşlem Akışı:** Sanal pos işlemleri için gerekli tüm adımlar kütüphane tarafından otomatik olarak halledilir. Bu sayede kod yazma süreci oldukça basitleşir.
++ **3D Güvenli Ödeme Desteği:** 3D Güvenli Ödeme işlemleri için gerekli tüm adımlar kütüphane tarafından desteklenir.
++ **Geniş Banka Kapsamı:** Akbank, Alternatif Bank, Anadolubank, Denizbank, QNB Finansbank, Finansbank Nestpay, Garanti BBVA, Halkbank, ING Bank, İş Bankası, Şekerbank, TEB, Türkiye Finans, Vakıfbank, Yapı Kredi ve Ziraat Bankası gibi birçok banka ile birlikte, Iyzico ve Sipay gibi ödeme kuruluşlarının da sanal pos entegrasyonları kütüphanede yer alır.
++ **.NET Uyumluluğu:** Kütüphane, .NET Framework, .NET Core ve .NET MAUI da dahil olmak üzere tüm .NET sürümleriyle tam uyumludur. Bu sayede farklı projelerde kolayca entegre edilerek kullanılabilir.
+
+## Sürüm Notları
+### v2.2.2
+ - Kart bin listesi güncellendi.
+### v2.2.1
+ - İş bankası test ortamı api adresleri güncellendi.
+### v2.2.0
+ - ZiraatPay ve VakıfPayS sanal pos entegrasyonları eklendi.
+### v2.1.1
+ - Nestpay bankalarında 3D'siz işlemlere sipariş numarası eklendi.
+### v2.1.0
+ - Vepara sanal pos entegrasyonu eklendi.
+### v2.0.1
+ - QNBpay, Paybull, Parolapara, IQmoney sanal poslarında tüm taksit seçenekleri sorgulama `AllInstallmentQuery` bug fix
+### v2.0.0
+ - Akbank yeni sanal pos altyapısı geliştirmesi yapıldı. Akbank aşamalı olarak sanal pos müşterilerini nestpay üzerinden kendi altyapsını geçiriyor. Halihazırda akbank kullananlar bu versiyona geçmeden önce yeni altyapı için erişim bilgilerini bankadan talep etmeliler veya eski (Nestpay) entegrasyonunu kullanmak isteyenler `CP.VPOS.Services.BankService.AkbankNestpay` veya `9046` kodu ile Nestpay üzerinden kullanabilirler.
+
+## Kütüphaneyi Nasıl Kullanabilirsiniz?
+CP.VPOS kütüphanesini NuGet paket yöneticisi aracılığıyla projenize ekleyebilirsiniz. Kütüphanenin kullanımıyla ilgili aşağıda bulunan kod örneklerine göz atabilirsiniz.
+
+[https://www.nuget.org/packages/CP.VPOS](https://www.nuget.org/packages/CP.VPOS)
+
+Package Manager:
+
+> Install-Package CP.VPOS
+
+Dotnet CLI
+> dotnet add package CP.VPOS
+
 
 ## Kullanılabilir Sanal POS'lar
+
+![ss](https://raw.githubusercontent.com/cempehlivan/CP.VPOS/master/bankalar.png)
 
 | Sanal POS | Satış | Satış 3D | İptal | İade  |
 | --------- | :---: | :------: | :---: | :---: |
 | Akbank | ✔️ | ✔️ | ✔️ | ✔️ |
+| Akbank Nestpay | ✔️ | ✔️ | ✔️ | ✔️ |
 | Alternatif Bank | ✔️ | ✔️ | ✔️ | ✔️ |
 | Anadolubank | ✔️ | ✔️ | ✔️ | ✔️ |
 | Denizbank | ✔️ | ✔️ | ✔️ | ✔️ |
@@ -32,20 +73,21 @@ Bu projenin amacı, tüm sanal posları tek bir codebase ile kullanmak.
 | Iyzico | ✔️ | ✔️ | ✔️ | ✔️ |
 | Sipay | ✔️ | ✔️ | ✔️ | ✔️ |
 | QNBpay | ✔️ | ✔️ | ✔️ | ✔️ |
+| ParamPos | ✔️ | ✔️ | ✔️ | ✔️ |
+| PayBull | ✔️ | ✔️ | ✔️ | ✔️ |
+| Parolapara | ✔️ | ✔️ | ✔️ | ✔️ |
+| IQmoney | ✔️ | ✔️ | ✔️ | ✔️ |
+| Ahlpay | ✔️ | ✔️ | ✔️ | ✔️ |
+| Moka | ✔️ | ✔️ | ✔️ | ✔️ |
+| Vepara | ✔️ | ✔️ | ✔️ | ✔️ |
+| ZiraatPay | ✔️ | ✔️ | ✔️ | ✔️ |
+| VakıfPayS | ✔️ | ✔️ | ✔️ | ✔️ |
 
 
-## NuGet
-[https://www.nuget.org/packages/CP.VPOS](https://www.nuget.org/packages/CP.VPOS)
 
-Package Manager:
+# Dokümanlar
 
-> Install-Package CP.VPOS
-
-Dotnet CLI
-> dotnet add package CP.VPOS
-
-
-# Dökümanlar
+Detaylı dokümanlara [https://www.vpos.com.tr/docs](https://www.vpos.com.tr/docs) adresinden ulaşabilirsiniz.
 
 ## API Bilgilerinin ayarlanması - `VirtualPOSAuth` Class'ı
 
@@ -65,7 +107,8 @@ Sanal POS bazlı alan açıklamaları:
 
 | Sanal POS | bankCode | merchantID | merchantUser | merchantPassword | merchantStorekey |
 | --------- | -------- | ---------- | ------------ | ---------------- | ---------------- |
-| Akbank | CP.VPOS.Services.BankService.Akbank | Mağaza Kodu | Api Kullanıcısı Adı | Api Kullanıcısı Şifre | 3D Storekey (Üye İş Yeri Anahtarı) |
+| Akbank | CP.VPOS.Services.BankService.Akbank | İş Yeri No | Güvenli İşyeri Numarası (merchantSafeId) | Terminal Safe ID | Güvenlik Anahtarı (Secret Key) |
+| Akbank Nestpay | CP.VPOS.Services.BankService.AkbankNestpay | Mağaza Kodu | Api Kullanıcısı Adı | Api Kullanıcısı Şifre | 3D Storekey (Üye İş Yeri Anahtarı) |
 | Alternatif Bank | CP.VPOS.Services.BankService.AlternatifBank | Mağaza Kodu | Api Kullanıcısı Adı | Api Kullanıcısı Şifre | 3D Storekey (Üye İş Yeri Anahtarı) |
 | Anadolubank | CP.VPOS.Services.BankService.Anadolubank | Mağaza Kodu | Api Kullanıcısı Adı | Api Kullanıcısı Şifre | 3D Storekey (Üye İş Yeri Anahtarı) |
 | Denizbank | CP.VPOS.Services.BankService.Denizbank | Mağaza Kodu | Api Kullanıcısı Adı | Api Kullanıcısı Şifre | 3D Storekey (Üye İş Yeri Anahtarı) |
@@ -87,6 +130,17 @@ Sanal POS bazlı alan açıklamaları:
 | Iyzico | CP.VPOS.Services.BankService.Iyzico | Üye İşyeri Numarası | API Anahtarı | Güvenlik Anahtarı | |
 | Sipay | CP.VPOS.Services.BankService.Sipay | Üye İşyeri ID | Uygulama Anahtarı | Uygulama Parolası | Üye İşyeri Anahtarı |
 | QNBpay | CP.VPOS.Services.BankService.QNBpay | Üye İşyeri ID | Uygulama Anahtarı | Uygulama Parolası | Üye İşyeri Anahtarı |
+| ParamPos | CP.VPOS.Services.BankService.ParamPos | Terminal No (Client Code) | Kullanıcı Adı | Şifre | Anahtar (Guid) |
+| PayBull | CP.VPOS.Services.BankService.PayBull | Üye İşyeri ID | Uygulama Anahtarı | Uygulama Parolası | Üye İşyeri Anahtarı |
+| Parolapara | CP.VPOS.Services.BankService.Parolapara | Üye İşyeri ID | Uygulama Anahtarı | Uygulama Parolası | Üye İşyeri Anahtarı |
+| IQmoney | CP.VPOS.Services.BankService.IQmoney | Üye İşyeri ID | Uygulama Anahtarı | Uygulama Parolası | Üye İşyeri Anahtarı |
+| Ahlpay | CP.VPOS.Services.BankService.Ahlpay | member Id | Api Kullanıcısı Adı | Api Kullanıcısı Şifre | Üye işyeri API Key (hashPassword) |
+| Moka | CP.VPOS.Services.BankService.Moka | Bayi Kodu | Api Kullanıcısı Adı | Api Kullanıcısı Şifre | |
+| Vepara | CP.VPOS.Services.BankService.Vepara | Üye İşyeri ID | Uygulama Anahtarı | Uygulama Parolası | Üye İşyeri Anahtarı |
+| ZiraatPay | CP.VPOS.Services.BankService.ZiraatPay | Firma Kodu | Api Kullanıcısı Adı | Api Kullanıcısı Şifre | |
+| VakıfPayS | CP.VPOS.Services.BankService.VakifPayS | Firma Kodu | Api Kullanıcısı Adı | Api Kullanıcısı Şifre | |
+
+
 
 ## 3D'siz Direkt Satış İşlemi
 
@@ -94,14 +148,14 @@ Sanal POS bazlı alan açıklamaları:
 
 
 ```csharp
-VirtualPOSAuth nestpayAkbank = new VirtualPOSAuth
+VirtualPOSAuth _qnbPayTest = new VirtualPOSAuth
 {
-	bankCode = CP.VPOS.Services.BankService.Akbank,
-	merchantID = "100100000",
-	merchantUser = "AKTESTAPI",
-	merchantPassword = "AKBANK01",
-	merchantStorekey = "123456",
-	testPlatform = true
+    bankCode = CP.VPOS.Services.BankService.QNBpay,
+    merchantID = "20158",
+    merchantUser = "07fb70f9d8de575f32baa6518e38c5d6",
+    merchantPassword = "61d97b2cac247069495be4b16f8604db",
+    merchantStorekey = "$2y$10$N9IJkgazXMUwCzpn7NJrZePy3v.dIFOQUyW4yGfT3eWry6m.KxanK",
+    testPlatform = true
 };
 
 CustomerInfo customerInfo = new CustomerInfo
@@ -125,12 +179,12 @@ SaleRequest saleRequest = new SaleRequest
 	shippingInfo = customerInfo,
 	saleInfo = new SaleInfo
 	{
-		cardNameSurname = "cem test",
-		cardNumber = "4355084355084358",
-		cardExpiryDateMonth = 12,
-		cardExpiryDateYear = 2030,
-		amount = (decimal)100.50,
-		cardCVV = "000",
+		cardNameSurname = "test kart",
+		cardNumber = "4022780520669303",
+		cardExpiryDateMonth = 1,
+		cardExpiryDateYear = 2050,
+		cardCVV = "988",
+		amount = (decimal)10,
 		currency = CP.VPOS.Enums.Currency.TRY,
 		installment = 1,
 	},
@@ -143,7 +197,7 @@ SaleRequest saleRequest = new SaleRequest
 };
 
 
-var resp = VPOSClient.Sale(saleRequest, nestpayAkbank);
+var resp = VPOSClient.Sale(saleRequest, _qnbPayTest);
 ```
 
 ## 3D Secure Satış İşlemi
@@ -157,14 +211,14 @@ Bu işlem sonrası client, banka 3D doğrulama sayfasına yönlendirilir. Bu say
 3D den gelen form request body'sini  `Dictionary<string, object>` e çevirip `VPOSClient.Sale3DResponse` methoduna gönderilmesi gerekmektedir. Bu işlem sonrası nihai sonuç döner.
 
 ```csharp
-VirtualPOSAuth nestpayAkbank = new VirtualPOSAuth
+VirtualPOSAuth _qnbPayTest = new VirtualPOSAuth
 {
-	bankCode = CP.VPOS.Services.BankService.Akbank,
-	merchantID = "100100000",
-	merchantUser = "AKTESTAPI",
-	merchantPassword = "AKBANK01",
-	merchantStorekey = "123456",
-	testPlatform = true
+    bankCode = CP.VPOS.Services.BankService.QNBpay,
+    merchantID = "20158",
+    merchantUser = "07fb70f9d8de575f32baa6518e38c5d6",
+    merchantPassword = "61d97b2cac247069495be4b16f8604db",
+    merchantStorekey = "$2y$10$N9IJkgazXMUwCzpn7NJrZePy3v.dIFOQUyW4yGfT3eWry6m.KxanK",
+    testPlatform = true
 };
 
 CustomerInfo customerInfo = new CustomerInfo
@@ -188,12 +242,12 @@ SaleRequest saleRequest = new SaleRequest
 	shippingInfo = customerInfo,
 	saleInfo = new SaleInfo
 	{
-		cardNameSurname = "cem test",
-		cardNumber = "4355084355084358",
-		cardExpiryDateMonth = 12,
-		cardExpiryDateYear = 2030,
-		amount = (decimal)100.50,
-		cardCVV = "000",
+		cardNameSurname = "test kart",
+		cardNumber = "4022780520669303",
+		cardExpiryDateMonth = 1,
+		cardExpiryDateYear = 2050,
+		cardCVV = "988",
+		amount = (decimal)10,
 		currency = CP.VPOS.Enums.Currency.TRY,
 		installment = 1,
 	},
@@ -207,7 +261,7 @@ SaleRequest saleRequest = new SaleRequest
 };
 
 
-var resp = VPOSClient.Sale(saleRequest, nestpayAkbank);
+var resp = VPOSClient.Sale(saleRequest, _qnbPayTest);
 ```
 
 
@@ -220,12 +274,17 @@ public class PaymentController
 {
     public async Task<IActionResult> VirtualPOS3DResponse()
     {
-        Dictionary<string, object> pairs = Request.Form.Keys.ToDictionary(k => k, v => (object)Request.Form[v]);    
+        Dictionary<string, object>? pairs = null;
+
+        if (Request.Method == "GET")
+            pairs = Request.Query.Keys.ToDictionary(k => k, v => (object)Request.Query[v]);
+        else
+            pairs = Request.Form.Keys.ToDictionary(k => k, v => (object)Request.Form[v]);   
 
         SaleResponse response = VPOSClient.Sale3DResponse(new Sale3DResponseRequest
         {
             responseArray = pairs
-        }, nestpayAkbank);
+        }, _qnbPayTest);
     }
 }
 

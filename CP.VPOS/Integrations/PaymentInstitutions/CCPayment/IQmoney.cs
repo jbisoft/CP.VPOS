@@ -12,12 +12,12 @@ using CP.VPOS.Helpers;
 using CP.VPOS.Interfaces;
 using CP.VPOS.Models;
 
-namespace CP.VPOS.Banks.Sipay
+namespace CP.VPOS.Banks.IQmoney
 {
-    internal class SipayVirtualPOSService : IVirtualPOSService
+    internal class IQmoneyVirtualPOSService : IVirtualPOSService
     {
-        private readonly string _urlAPITest = "https://provisioning.sipay.com.tr/ccpayment";
-        private readonly string _urlAPILive = "https://app.sipay.com.tr/ccpayment";
+        private readonly string _urlAPITest = "https://provisioning.iqmoneytr.com/ccpayment";
+        private readonly string _urlAPILive = "https://app.iqmoneytr.com/ccpayment";
 
         public SaleResponse Sale(SaleRequest request, VirtualPOSAuth auth)
         {
@@ -31,7 +31,7 @@ namespace CP.VPOS.Banks.Sipay
 
             response.orderNumber = request.orderNumber;
 
-            SipayTokenModel _token = null;
+            IQmoneyTokenModel _token = null;
 
             try
             {
@@ -104,24 +104,27 @@ namespace CP.VPOS.Banks.Sipay
             {
                 string transactionId = "";
 
+                Dictionary<string, object> dataObj = null;
+
                 try
                 {
                     if (responseDic.ContainsKey("data"))
-                    {
-                        var dataObj = JsonConvertHelper.Convert<Dictionary<string, object>>(JsonConvertHelper.Json(responseDic["data"]));
-
-                        if (dataObj?.ContainsKey("auth_code") == true)
-                            transactionId = dataObj["auth_code"].cpToString();
-                    }
+                        dataObj = JsonConvertHelper.Convert<Dictionary<string, object>>(JsonConvertHelper.Json(responseDic["data"]));
                 }
                 catch { }
 
 
-                response.statu = SaleResponseStatu.Success;
-                response.message = "İşlem başarılı";
-                response.transactionId = transactionId;
+                if (dataObj?.ContainsKey("auth_code") == true)
+                    transactionId = dataObj["auth_code"].cpToString();
 
-                return response;
+                if (dataObj?.ContainsKey("payment_status") == true && dataObj["payment_status"].cpToString() == "1")
+                {
+                    response.statu = SaleResponseStatu.Success;
+                    response.message = "İşlem başarılı";
+                    response.transactionId = transactionId;
+
+                    return response;
+                }
             }
 
             string errorMsg = "İşlem sırasında bir hata oluştu";
@@ -141,7 +144,7 @@ namespace CP.VPOS.Banks.Sipay
             response.orderNumber = request.orderNumber;
 
 
-            SipayTokenModel _token = null;
+            IQmoneyTokenModel _token = null;
 
             try
             {
@@ -251,7 +254,7 @@ namespace CP.VPOS.Banks.Sipay
                 response.statu = SaleResponseStatu.Error;
                 response.message = "Hash doğrulanamadı, ödeme onaylanmadı.";
             }
-            else if (request?.responseArray?.ContainsKey("status_code") == true && request.responseArray["status_code"].cpToString() == "100")
+            else if (request?.responseArray?.ContainsKey("payment_status") == true && request.responseArray["payment_status"].cpToString() == "1")
             {
                 response.statu = SaleResponseStatu.Success;
                 response.message = "İşlem başarılı";
@@ -274,7 +277,7 @@ namespace CP.VPOS.Banks.Sipay
         {
             CancelResponse response = new CancelResponse { statu = ResponseStatu.Error };
 
-            SipayTokenModel _token = null;
+            IQmoneyTokenModel _token = null;
 
             try
             {
@@ -331,7 +334,7 @@ namespace CP.VPOS.Banks.Sipay
         {
             RefundResponse response = new RefundResponse { statu = ResponseStatu.Error };
 
-            SipayTokenModel _token = null;
+            IQmoneyTokenModel _token = null;
 
             try
             {
@@ -390,16 +393,110 @@ namespace CP.VPOS.Banks.Sipay
             return null;
         }
 
-        public AllInstallmentQueryResponse AllInstallmentQuery(AllInstallmentQueryRequest request, VirtualPOSAuth auth)
-        {
-            return null;
-        }
+		public AllInstallmentQueryResponse AllInstallmentQuery(AllInstallmentQueryRequest request, VirtualPOSAuth auth)
+		{
+			AllInstallmentQueryResponse response = new AllInstallmentQueryResponse { confirm = false, installmentList = new List<AllInstallment>() };
 
-        public BINInstallmentQueryResponse BINInstallmentQuery(BINInstallmentQueryRequest request, VirtualPOSAuth auth)
+			IQmoneyTokenModel _token = null;
+
+			try
+			{
+				_token = GetTokenModel(auth);
+			}
+			catch
+			{
+				return response;
+			}
+
+			Dictionary<string, object> req = new Dictionary<string, object> {
+				{"currency_code", (request.currency ?? Currency.TRY).ToString() }
+			};
+
+
+			string link = $"{(auth.testPlatform ? _urlAPITest : _urlAPILive)}/api/commissions";
+
+			string responseStr = Request(req, link, _token);
+
+			try
+			{
+				Dictionary<string, object> responseDic = JsonConvertHelper.Convert<Dictionary<string, object>>(responseStr);
+
+				if (responseDic?.ContainsKey("status_code") == true && responseDic["status_code"].cpToString() == "100")
+				{
+					response.confirm = true;
+
+					if (responseDic?.ContainsKey("data") == true)
+					{
+						Dictionary<string, object> keyValuePairs = JsonConvertHelper.Convert<Dictionary<string, object>>(JsonConvertHelper.Json<object>(responseDic["data"]));
+
+						if (keyValuePairs?.Any() == true)
+						{
+							foreach (var item in keyValuePairs)
+							{
+								int installment_number = item.Key.cpToInt();
+
+								List<Dictionary<string, object>> installmentList = JsonConvertHelper.Convert<List<Dictionary<string, object>>>(JsonConvertHelper.Json<object>(item.Value));
+
+								foreach (Dictionary<string, object> installmentModel in installmentList)
+								{
+
+									if (installmentModel?.ContainsKey("user_commission_percentage") == true && installmentModel["user_commission_percentage"].cpToString() != "x" && installmentModel.ContainsKey("card_program") == true && installmentModel["card_program"].cpToString() != "")
+									{
+										CreditCardProgram creditCardProgram = CreditCardProgram.Unknown;
+										string getpos_card_program = installmentModel["card_program"].cpToString();
+										float user_commission_percentage = installmentModel["user_commission_percentage"].cpToSingle();
+
+										switch (getpos_card_program)
+										{
+											case "MAXIMUM": creditCardProgram = CreditCardProgram.Maximum; break;
+											case "BANKKART_COMBO": creditCardProgram = CreditCardProgram.Bankkart; break;
+											case "WORLD": creditCardProgram = CreditCardProgram.World; break;
+											case "PARAF": creditCardProgram = CreditCardProgram.Paraf; break;
+											case "BONUS": creditCardProgram = CreditCardProgram.Bonus; break;
+											case "AXESS": creditCardProgram = CreditCardProgram.Axess; break;
+											case "WINGS": creditCardProgram = CreditCardProgram.Wings; break;
+											case "CARD_FNS": creditCardProgram = CreditCardProgram.CardFinans; break;
+											case "ADVANT": creditCardProgram = CreditCardProgram.Advantage; break;
+											case "MILES&SMILES": creditCardProgram = CreditCardProgram.MilesAndSmiles; break;
+
+											default:
+												creditCardProgram = CreditCardProgram.Unknown;
+												break;
+										}
+
+										if (creditCardProgram == CreditCardProgram.Unknown)
+											continue;
+
+										AllInstallment model = new AllInstallment
+										{
+											bankCode = "9986",
+											cardProgram = creditCardProgram,
+											count = installment_number,
+											customerCostCommissionRate = user_commission_percentage
+										};
+
+										response.installmentList.Add(model);
+									}
+									else
+										continue;
+
+								}
+							}
+
+						}
+					}
+				}
+			}
+			catch { }
+
+			return response;
+		}
+
+		public BINInstallmentQueryResponse BINInstallmentQuery(BINInstallmentQueryRequest request, VirtualPOSAuth auth)
         {
             BINInstallmentQueryResponse response = new BINInstallmentQueryResponse();
 
-            SipayTokenModel _token = null;
+            IQmoneyTokenModel _token = null;
 
             try
             {
@@ -445,7 +542,7 @@ namespace CP.VPOS.Banks.Sipay
                                 decimal payable_amount = item["payable_amount"].cpToDecimal();
                                 float commissionRate = 0;
 
-                                if (installments_number > 1)
+                                if (installments_number > 0)
                                 {
                                     if (payable_amount > request.amount)
                                         commissionRate = ((((decimal)100 * payable_amount) / request.amount) - (decimal)100).cpToSingle();
@@ -469,10 +566,9 @@ namespace CP.VPOS.Banks.Sipay
         }
 
 
-
-        private SipayTokenModel GetTokenModel(VirtualPOSAuth auth)
+        private IQmoneyTokenModel GetTokenModel(VirtualPOSAuth auth)
         {
-            SipayTokenModel token = null;
+            IQmoneyTokenModel token = null;
 
             Dictionary<string, object> postData = new Dictionary<string, object>
             {
@@ -488,13 +584,13 @@ namespace CP.VPOS.Banks.Sipay
 
             if (loginDic?.ContainsKey("status_code") == true && loginDic["status_code"].cpToString() == "100" && loginDic?.ContainsKey("data") == true)
             {
-                token = JsonConvertHelper.Convert<SipayTokenModel>(JsonConvertHelper.Json(loginDic["data"]));
+                token = JsonConvertHelper.Convert<IQmoneyTokenModel>(JsonConvertHelper.Json(loginDic["data"]));
 
                 if (!string.IsNullOrWhiteSpace(token?.token))
                     return token;
             }
 
-            string errorMsg = "Sipay token error";
+            string errorMsg = "IQmoney token error";
 
             if (loginDic?.ContainsKey("status_description") == true && loginDic["status_description"].cpToString() != "")
                 errorMsg = errorMsg + " - " + loginDic["status_description"].cpToString();
@@ -502,7 +598,7 @@ namespace CP.VPOS.Banks.Sipay
             throw new Exception(errorMsg);
         }
 
-        private string Request(Dictionary<string, object> param, string link, SipayTokenModel token = null)
+        private string Request(Dictionary<string, object> param, string link, IQmoneyTokenModel token = null)
         {
             string responseString = "";
 
@@ -640,10 +736,14 @@ namespace CP.VPOS.Banks.Sipay
             }
         }
 
+        public SaleQueryResponse SaleQuery(SaleQueryRequest request, VirtualPOSAuth auth)
+        {
+            return new SaleQueryResponse { statu = SaleQueryResponseStatu.Error, message = "Bu sanal pos için satış sorgulama işlemi şuan desteklenmiyor" };
+        }
     }
 
 
-    internal class SipayTokenModel
+    internal class IQmoneyTokenModel
     {
         public string token { get; set; }
         public Token_is_3d is_3d { get; set; }

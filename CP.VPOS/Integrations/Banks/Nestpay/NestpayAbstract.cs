@@ -1,13 +1,14 @@
-﻿using CP.VPOS.Models;
+﻿using CP.VPOS.Enums;
+using CP.VPOS.Helpers;
 using CP.VPOS.Interfaces;
+using CP.VPOS.Models;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using CP.VPOS.Enums;
-using CP.VPOS.Helpers;
-using System.Net;
-using System.Net.Http;
 using System.Globalization;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 
 namespace CP.VPOS.Banks
@@ -20,10 +21,16 @@ namespace CP.VPOS.Banks
         private static string _url3Dtest = "https://entegrasyon.asseco-see.com.tr/fim/est3Dgate";
         private static string _url3DLive = "";
 
-        public NestpayVirtualPOSService(string urlAPILive, string url3DLive)
+        public NestpayVirtualPOSService(string urlAPILive, string url3DLive, string urlAPITest = "", string url3DTest = "")
         {
             _urlAPILive = urlAPILive;
             _url3DLive = url3DLive;
+
+            if (!string.IsNullOrWhiteSpace(urlAPITest))
+                _urlAPITest = urlAPITest;
+
+            if (!string.IsNullOrWhiteSpace(url3DTest))
+                _url3Dtest = url3DTest;
         }
 
         public virtual SaleResponse Sale(SaleRequest request, VirtualPOSAuth auth)
@@ -44,6 +51,7 @@ namespace CP.VPOS.Banks
                 { "Password", auth.merchantPassword },
                 { "ClientId", auth.merchantID },
                 { "Type", "Auth" },
+                { "OrderId", request.orderNumber },
                 { "Total", request.saleInfo.amount.ToString("N2", CultureInfo.GetCultureInfo("tr-TR")).Replace(".", "").Replace(",", ".") },
                 { "Currency", ((int)request.saleInfo.currency).ToString() },
                 { "Number", request.saleInfo.cardNumber },
@@ -91,16 +99,23 @@ namespace CP.VPOS.Banks
 
             if (request.responseArray.ContainsKey("Response"))
             {
-                if (request.responseArray["Response"].cpToString() == "Error" || request.responseArray["Response"].cpToString() == "Decline")
-                {
-                    response.statu = SaleResponseStatu.Error;
-                    response.message = request.responseArray.ContainsKey("ErrMsg") ? request.responseArray["ErrMsg"].cpToString() : "İşlem sırasında bir hata oluştu.";
-                }
-                else if (request.responseArray["Response"].cpToString() == "Approved")
+                if (request.responseArray["Response"].cpToString() == "Approved")
                 {
                     response.statu = SaleResponseStatu.Success;
                     response.message = "İşlem başarıyla tamamlandı";
                     response.transactionId = request.responseArray.ContainsKey("TransId") ? request.responseArray["TransId"].cpToString() : "";
+                }
+                else
+                {
+                    string errMsg = "İşlem sırasında bir hata oluştu.";
+
+                    if (request.responseArray.ContainsKey("ErrMsg") && string.IsNullOrWhiteSpace(request.responseArray["ErrMsg"].cpToString()) == false)
+                        errMsg = request.responseArray["ErrMsg"].cpToString();
+                    else if (request.responseArray.ContainsKey("mdStatus") && request.responseArray["mdStatus"].cpToString() == "0")
+                        errMsg = "3D doğrulaması başarısız.";
+
+                    response.statu = SaleResponseStatu.Error;
+                    response.message = errMsg;
                 }
             }
 
@@ -121,6 +136,81 @@ namespace CP.VPOS.Banks
         public virtual AdditionalInstallmentQueryResponse AdditionalInstallmentQuery(AdditionalInstallmentQueryRequest request, VirtualPOSAuth auth)
         {
             return new AdditionalInstallmentQueryResponse { confirm = false };
+        }
+
+        public virtual SaleQueryResponse SaleQuery(SaleQueryRequest request, VirtualPOSAuth auth)
+        {
+            SaleQueryResponse response = new SaleQueryResponse
+            {
+                statu = SaleQueryResponseStatu.NotFound,
+                message = "Sipariş bulunamadı",
+                orderNumber = request.orderNumber,
+            };
+
+            Dictionary<string, object> param = new Dictionary<string, object>()
+            {
+                { "Name", auth.merchantUser },
+                { "Password", auth.merchantPassword },
+                { "ClientId", auth.merchantID },
+                { "OrderId", request.orderNumber },
+                { "Extra", new Dictionary<string, object>{ { "ORDERSTATUS", "QUERY" }  } }
+            };
+
+            string xml = param.toXml(rootTag: "CC5Request");
+
+            string resp = this.xmlRequest(xml, (auth.testPlatform ? _urlAPITest : _urlAPILive));
+
+            Dictionary<string, object> respDic = FoundationHelper.XmltoDictionary(resp, "CC5Response");
+
+            response.privateResponse = respDic;
+
+            if (respDic.ContainsKey("Response"))
+            {
+                if (respDic["Response"].cpToString() == "Approved")
+                {
+                    response.statu = SaleQueryResponseStatu.Found;
+                    response.message = "İşlem bulundu";
+                    response.transactionId = respDic.ContainsKey("TransId") ? respDic["TransId"].cpToString() : "";
+                }
+                else
+                {
+                    response.statu = SaleQueryResponseStatu.Error;
+                    response.message = respDic.ContainsKey("ErrMsg") ? respDic["ErrMsg"].cpToString() : "Sipariş bulunamadı";
+                }
+            }
+
+            if (respDic.ContainsKey("Extra") && respDic["Extra"] != null)
+            {
+                Dictionary<string, object> extraRespDic = respDic["Extra"] as Dictionary<string, object>;
+
+                if (extraRespDic?.ContainsKey("CAPTURE_AMT") == true)
+                    response.amount = extraRespDic["CAPTURE_AMT"].cpToString().cpToFlatStringParseDecimal();
+
+                if (extraRespDic?.ContainsKey("CAPTURE_DTTM") == true)
+                {
+                    string transactionDateStr = extraRespDic["CAPTURE_DTTM"].cpToString();
+
+                    int dotIndex = transactionDateStr.IndexOf('.');
+
+                    if (dotIndex > 0)
+                        transactionDateStr = transactionDateStr.Substring(0, dotIndex);
+
+                    if (DateTime.TryParseExact(transactionDateStr, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime result))
+                        response.transactionDate = result;
+                }
+
+                if (extraRespDic?.ContainsKey("TRANS_STAT") == true)
+                {
+                    string transStat = extraRespDic["TRANS_STAT"].cpToString();
+
+                    if (transStat == "S")
+                        response.transactionStatu = SaleQueryTransactionStatu.Paid;
+                    else if (transStat == "V")
+                        response.transactionStatu = SaleQueryTransactionStatu.Voided;
+                }
+            }
+
+            return response;
         }
 
         public CancelResponse Cancel(CancelRequest request, VirtualPOSAuth auth)
@@ -227,7 +317,7 @@ namespace CP.VPOS.Banks
                 { "hashAlgorithm", "ver3" }
             };
 
-            string hash = string.Join("|", param.OrderBy(s=> s.Key).Select(s=> s.Value.Replace("|", "\\|").Replace("\\", "\\\\") )) + "|" + auth.merchantStorekey;
+            string hash = string.Join("|", param.OrderBy(s => s.Key).Select(s => s.Value.Replace("|", "\\|").Replace("\\", "\\\\"))) + "|" + auth.merchantStorekey;
 
             hash = this.GetHash(hash);
 
